@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Patrimonio Venezuela</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- HEADER -->
+  <header>
+    <div class="nav-container">
+      <a href="index.html"><img src="logo.png" alt="Patrimonio" class="nav-logo-img"></a>
+      <nav id="mainNav">
+        <a href="index.html">Inicio</a>
+        <a href="index.html#mapa">Mapa</a>
+        <a href="index.html#galeria">Galería</a>
+      </nav>
+    </div>
+    <div class="header-right">
+      <button class="btn-header" id="backBtn">Volver</button>
+      <button class="nav-toggle" id="navToggle" aria-label="Abrir menú" onclick="toggleNav()">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENT -->
+  <main id="lugarContent"></main>
+
+  <!-- FOOTER -->
+  <footer>
+    <span>© 2025 Patrimonio Venezuela — Proyecto universitario · Materia: Cultura</span>
+    <span>24 estados · Venezuela</span>
+  </footer>
+
+  <script src="script.js"></script>
+  <script>
+    const params   = new URLSearchParams(window.location.search);
+    const estadoId = params.get('estado');
+    const lugarSlug = params.get('lugar');
+    const content  = document.getElementById('lugarContent');
+
+    // Back button: go to the estado page
+    const backBtn = document.getElementById('backBtn');
+    if (backBtn) backBtn.onclick = () => location.href = `estado.html?estado=${estadoId}`;
+
+    function slugify(str) {
+      return str.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '')
+        .trim().replace(/\s+/g, '-');
+    }
+
+    if (estadoId && lugarSlug && DATA[estadoId]) {
+      const estado = DATA[estadoId];
+      const lugar  = estado.lugares.find(l => slugify(l.n) === lugarSlug);
+
+      if (lugar) {
+        document.title = `${lugar.n} — Patrimonio Venezuela`;
+
+        // ── HERO ──────────────────────────────────────────────────
+        const heroEl = document.createElement('div');
+        heroEl.className = 'lugar-hero';
+        heroEl.innerHTML = `
+          <a class="back-link" href="estado.html?estado=${estadoId}">← ${estado.nombre}</a>
+          <div class="lugar-hero-meta">
+            <span class="lugar-badge badge-${lugar.cat}">${lugar.cat}</span>
+          </div>
+          <h1>${lugar.n}</h1>
+          <p class="lugar-subtitle">${lugar.d}</p>
+        `;
+        content.appendChild(heroEl);
+
+        // ── BODY ───────────────────────────────────────────────────
+        const bodyEl = document.createElement('div');
+        bodyEl.className = 'lugar-body';
+
+        // Biografía / descripción larga
+        const bioEl = document.createElement('div');
+        bioEl.className = 'lugar-bio';
+        bioEl.innerHTML = `
+          <h2>Sobre este lugar</h2>
+          <p>${lugar.bio || lugar.d}</p>
+        `;
+        bodyEl.appendChild(bioEl);
+
+        // Galería de imágenes
+        const imgs = lugar.imgs || (lugar.img ? [lugar.img] : []);
+        const galeriaEl = document.createElement('div');
+        galeriaEl.className = 'lugar-galeria';
+
+        if (imgs.length > 0) {
+          lightboxImgs = imgs;
+            galeriaEl.innerHTML = `
+              <h2>Galería</h2>
+              <div class="lugar-imgs-grid">
+                ${imgs.map((src, i) => `
+                  <div class="lugar-img-card">
+                    <img src="${src}" alt="${lugar.n}" loading="lazy"
+                      onclick="abrirLightbox(${i})"
+                      style="cursor:zoom-in;">
+                  </div>`).join('')}
+              </div>
+              <p class="galeria-creditos">
+                Imágenes: <a href="https://commons.wikimedia.org/" target="_blank" rel="noopener">Wikimedia Commons</a>.
+                Licencias Creative Commons (CC BY / CC BY-SA) y dominio público.
+                Los créditos individuales de cada imagen se encuentran en la página correspondiente de Wikimedia Commons.
+              </p>`;
+
+        } else {
+          // Placeholder slots para que el usuario agregue imágenes
+          galeriaEl.innerHTML = `
+            <h2>Galería</h2>
+            <p class="lugar-imgs-hint">
+              Para añadir imágenes, agrega un campo <code>imgs: ["url1.jpg", "url2.jpg"]</code>
+              al lugar <strong>"${lugar.n}"</strong> en <code>script.js</code>.
+            </p>
+            <div class="lugar-imgs-grid">
+              ${[1,2,3].map(i => `
+                <div class="lugar-img-placeholder">
+                  <span>Imagen ${i}</span>
+                </div>`).join('')}
+            </div>`;
+        }
+
+        bodyEl.appendChild(galeriaEl);
+
+        // Info card lateral
+        const infoEl = document.createElement('aside');
+        infoEl.className = 'lugar-info';
+        infoEl.innerHTML = `
+          <h3>Información</h3>
+          <dl>
+            <dt>Estado</dt><dd>${estado.nombre}</dd>
+            <dt>Capital</dt><dd>${estado.capital}</dd>
+            <dt>Región</dt><dd>${estado.region}</dd>
+            <dt>Categoría</dt><dd>${lugar.cat}</dd>
+          </dl>
+          <a href="estado.html?estado=${estadoId}" class="btn-info-volver">
+            Ver más de ${estado.nombre}
+          </a>
+        `;
+
+        // Wrap bio+galeria in a container next to info
+        const layoutEl = document.createElement('div');
+        layoutEl.className = 'lugar-layout';
+        layoutEl.appendChild(bodyEl);
+        layoutEl.appendChild(infoEl);
+        content.appendChild(layoutEl);
+
+      } else {
+        content.innerHTML = `<div class="no-state"><h2>Lugar no encontrado</h2>
+          <p>No se encontró el patrimonio buscado.</p>
+          <button class="btn-primary" onclick="location.href='index.html'">← Inicio</button>
+        </div>`;
+      }
+    } else {
+      content.innerHTML = `<div class="no-state"><h2>Lugar no encontrado</h2>
+        <button class="btn-primary" onclick="location.href='index.html'">← Inicio</button>
+      </div>`;
+    }
+  </script>
+  <div id="lightbox" onclick="cerrarLightbox()">
+  <button id="lightboxClose" onclick="cerrarLightbox()">✕</button>
+  <button id="lightboxPrev" onclick="event.stopPropagation(); moverLightbox(-1)">‹</button>
+  <img id="lightboxImg" src="" alt="">
+  <button id="lightboxNext" onclick="event.stopPropagation(); moverLightbox(1)">›</button>
+</div>
+</body>
+</html>
